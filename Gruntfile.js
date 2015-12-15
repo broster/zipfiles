@@ -8,7 +8,7 @@ grunt.initConfig({
     },
     lambda_deploy: {
         default: {
-            arn: 'arn:aws:lambda:us-east-1:066860733555:function:putzip'
+            arn: 'arn:aws:lambda:us-east-1:066860733555:function:zipfiles'
         }
     },
     lambda_package: {
