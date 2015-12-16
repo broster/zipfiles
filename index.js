@@ -1,5 +1,6 @@
 var aws = require('aws-sdk')
 var async = require('async')
+var JSZip = require('node-zip')
 
 exports.handler = function (event, context) {
     console.log(event.name);
@@ -10,36 +11,47 @@ exports.handler = function (event, context) {
 	async.waterfall(
 	[  
 		function download(next) {
+			
 			console.log("download");
 			
-			s3.getObject(
+ 			s3.getObject(
 			{
 				Bucket: event.name,
 				Key: event.key
 			},
-			function(err, data) {
-				console.log("download error");
-				next(err, data);
+			function(err, response) {
+				if (err) {
+					console.log("download error");
+					console.log(response);
+					context.fail('error in download: ' + err);
+				}
+				else {
+					next(null, response);
+				}
 			});
 		},
-		function gunzip(response, next) {
-			console.log("gunzip");
+		function unzip(response, next) {
 			
-			var buffer = new Buffer(response.Body);
+			console.log("unzip");
+			console.log(response);
 
-			zlib.gunzip(buffer, function(err, decoded) {
-				next(err, decoded && decoded.toString());
-			});
+			var zip = new JSZip();
+			
+			zip.load(response.Body);
+
+			var text = zip.file("test.txt").asText();
+
+			next(null, text);
 		},
-		function doSomething(data, next) {
-			// `data` is raw data, ready for use.
-			console.log("doSomething");
+		function doSomething(response, next) {
+			
+			console.log("doSomething: " + response);
+			
+			context.done(null, 'complete');
 		}
 	],
 	function(e, r) {
 		console.log("error");
 		if (e) throw e;
 	});
-	
-    context.done(null, 'complete');
 };
