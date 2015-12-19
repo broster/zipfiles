@@ -1,4 +1,11 @@
 {
-    "name": "brianroster",
-	"key": "test.zip"
+  "project_id": "1234",
+  "file_names": [
+    "file1.txt",
+    "file4.txt"
+  ],
+  "tags": [
+    "textfiles",
+    "mbo"
+  ]
 }
