@@ -1,85 +1,119 @@
-var aws = require('aws-sdk')
-var async = require('async')
-var JSZip = require('node-zip')
+var async = require('async');
+var aws = require('aws-sdk');
+var JSZip = require('node-zip');
 
 exports.handler = function (event, context) {
 
-	var logger = new EventLogger();
-	logger.logEvent(event);
+	var logger = new EventLogger(event);
+	logger.logEvent();
+
+	//var s3ZipReader = new S3ZipReader();
+	//s3ZipReader.readZip(event, context);
 	
-	var s3ZipReader = new S3ZipReader();
-	s3ZipReader.readZip(event, context);
+	var s3 = new aws.S3();
+	var zip = new JSZip();
 	
-	var zipCreator = new ZipCreator();
-	zipCreator.createZip(event, context);
+	var zipCreator = new ZipCreator(event, s3, zip, 'brianroster', 'download.zip');
+	zipCreator.createZipOnS3();
+	
+	//var success = zipCreator.createZipOnS3(event, "brianroster", "download.zip");
 };
 
-function EventLogger() {
-    this.logEvent = function(event) {
-        event.file_names.forEach(function(entry) {
-            console.log(entry);
-        });
-        event.tags.forEach(function(entry) {
-            console.log(entry);
-        });
-    }
-}
+function EventLogger(event) {
+	this._event = event;
+};
 
-function ZipCreator() {
-	this.createZip = function(event, context) {
-		// TODO: create zip file based on files and tags in the event
-		// See the EventLogger for how to iterate over each of them
-	}
-}
-function S3ZipReader() {
-	this.readZip = function(event, context) {
-		var s3 = new aws.S3();  
+EventLogger.prototype.logEvent = function(event) {
+	this._event.file_names.forEach(function(entry) {
+		console.log(entry);
+	});
+	this._event.tags.forEach(function(entry) {
+		console.log(entry);
+	});
+};
 
-		async.waterfall(
-		[  
-			function download(next) {
-				
-				console.log("download");
-				
-				s3.getObject(
-				{
-					Bucket: "brianroster",
-					Key: "test.zip"
-				},
-				function(err, response) {
-					if (err) {
-						console.log("download error");
-						console.log(response);
-						context.fail('error in download: ' + err);
-					}
-					else {
-						next(null, response);
-					}
+function ZipCreator(event, s3, zip, bucket, zipFileName) {
+	this.event = event;
+	this.bucket = bucket;
+	this.s3 = s3;
+	this.zip = zip;
+	this.zipFileName = zipFileName;
+
+	this.createZipOnS3 = function() {
+		console.log('createZipOnS3');
+		var self = this;
+ 		async.series(
+		[
+			function(next) {
+				console.log('calling generateZipInMemory');
+				self.generateZipInMemory(function(err) {
+					if (err) return next(err);
+					next();
 				});
 			},
-			function unzip(response, next) {
-				
-				console.log("unzip");
-				console.log(response);
-
-				var zip = new JSZip();
-				
-				zip.load(response.Body);
-
-				var text = zip.file("test.txt").asText();
-
-				next(null, text);
-			},
-			function doSomething(response, next) {
-				
-				console.log("doSomething: " + response);
-				
-				context.done(null, 'complete');
+			function(next) {
+				console.log('calling saveInMemoryZipToS3');
+				self.saveInMemoryZipToS3(function(err) {
+					if (err) return next(err);
+					next();
+				});
 			}
 		],
-		function(e, r) {
-			console.log("error");
-			if (e) throw e;
+		function(err) {
+			console.log('createZipOnS3 final callback: ' + err);
+			if (err) throw err;
 		});
-	}
-}
+	};
+
+	this.generateZipInMemory = function(callback) {
+		console.log('generateZipInMemory');
+		var self = this;
+        async.eachSeries(event.file_names, function(entry, next) {
+			self.generateZipInMemoryHelper(entry, function(err) {
+				if (err) return next(err);
+				next();
+			});
+        },
+		function(err) {
+			console.log('createZipOnS3 final callback: ' + err);
+			if (err) return callback(err);
+			callback();
+		});
+	};
+	
+	this.generateZipInMemoryHelper = function(entry, callback) {
+		console.log('generateZipInMemoryHelper');
+		var self = this;
+		async.waterfall(
+		[  
+			function getFromS3(next) {
+				console.log('getFromS3: ' + entry);
+				self.s3.getObject(
+				{
+					Bucket: self.bucket,
+					Key: entry
+				}, function(err, response) {
+					if (err) return next(err);
+					next(null, response);
+				});
+			},
+			function addToZip(response, next) {
+				console.log('addToZip: ' + entry);
+				// TODO: How to handle errors for a non-async method?
+				self.zip.file(self.zipFileName, response.Body);
+				next();
+			}
+		],
+		function(err) {
+			console.log('generateZipInMemoryHelper final callback for ' + entry + ': ' + err);
+			if (err) return callback(err);
+			callback();
+		});
+	};
+	
+	this.saveInMemoryZipToS3 = function(callback) {
+		console.log('saveInMemoryZipToS3');
+		var self = this;
+		callback();
+	};
+};
