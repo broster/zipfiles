@@ -14,9 +14,14 @@ exports.handler = function (event, context) {
 	var zip = new JSZip();
 	
 	var zipCreator = new ZipCreator(event, s3, zip, 'brianroster', 'download.zip');
-	zipCreator.createZipOnS3();
-	
-	//var success = zipCreator.createZipOnS3(event, "brianroster", "download.zip");
+	zipCreator.createZipOnS3(function(err) {
+		if (err) {
+			context.fail('fail');
+		}
+		else {
+			context.succeed('ok');		
+		}
+	});
 };
 
 function EventLogger(event) {
@@ -39,7 +44,7 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 	this.zip = zip;
 	this.zipFileName = zipFileName;
 
-	this.createZipOnS3 = function() {
+	this.createZipOnS3 = function(callback) {
 		console.log('createZipOnS3');
 		var self = this;
  		async.series(
@@ -61,7 +66,8 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 		],
 		function(err) {
 			console.log('createZipOnS3 final callback: ' + err);
-			if (err) throw err;
+			if (err) return callback(err);
+			callback();
 		});
 	};
 
@@ -88,11 +94,8 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 		[  
 			function getFromS3(next) {
 				console.log('getFromS3: ' + entry);
-				self.s3.getObject(
-				{
-					Bucket: self.bucket,
-					Key: entry
-				}, function(err, response) {
+				var params = { Bucket: self.bucket, Key: entry };
+				self.s3.getObject(params, function(err, response) {
 					if (err) return next(err);
 					next(null, response);
 				});
@@ -100,7 +103,7 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 			function addToZip(response, next) {
 				console.log('addToZip: ' + entry);
 				// TODO: How to handle errors for a non-async method?
-				self.zip.file(self.zipFileName, response.Body);
+				self.zip.file(entry, response.Body);
 				next();
 			}
 		],
@@ -114,6 +117,29 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 	this.saveInMemoryZipToS3 = function(callback) {
 		console.log('saveInMemoryZipToS3');
 		var self = this;
-		callback();
+ 		async.waterfall(
+		[
+			function(next) {
+				console.log('generating final zip...');
+				// TODO: How to handle errors for a non-async method?
+				var options = { type: 'nodebuffer' };
+				var content = self.zip.generate(options);
+				next(null, content);
+			},
+			function(content, next) {
+				console.log('saving to S3...');
+				var params = {Bucket: self.bucket, Key: self.zipFileName, Body: content};
+				var options = {partSize: 10 * 1024 * 1024, queueSize: 1};
+				self.s3.upload(params, options, function(err, response) {
+					if (err) return next(err);
+					next();
+				});
+			}
+		],
+		function(err) {
+			console.log('saveInMemoryZipToS3 final callback: ' + err);
+			if (err) return callback(err);
+			callback();
+		});
 	};
 };
