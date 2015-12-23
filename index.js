@@ -6,9 +6,6 @@ exports.handler = function (event, context) {
 
 	var logger = new EventLogger(event);
 	logger.logEvent();
-
-	//var s3ZipReader = new S3ZipReader();
-	//s3ZipReader.readZip(event, context);
 	
 	var s3 = new aws.S3();
 	var zip = new JSZip();
@@ -26,15 +23,15 @@ exports.handler = function (event, context) {
 
 function EventLogger(event) {
 	this._event = event;
-};
-
-EventLogger.prototype.logEvent = function(event) {
-	this._event.file_names.forEach(function(entry) {
-		console.log(entry);
-	});
-	this._event.tags.forEach(function(entry) {
-		console.log(entry);
-	});
+	
+	this.logEvent = function(event) {
+		this._event.file_names.forEach(function(entry) {
+			console.log(entry);
+		});
+		this._event.tags.forEach(function(entry) {
+			console.log(entry);
+		});
+	};
 };
 
 function ZipCreator(event, s3, zip, bucket, zipFileName) {
