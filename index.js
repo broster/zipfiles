@@ -1,22 +1,21 @@
-var async = require('async');
+var async = require('async'); 
 var aws = require('aws-sdk');
 var JSZip = require('node-zip');
 
 exports.handler = function (event, context) {
-
 	var logger = new EventLogger(event);
 	logger.logEvent();
 	
 	var s3 = new aws.S3();
 	var zip = new JSZip();
-	
+
 	var zipCreator = new ZipCreator(event, s3, zip, 'brianroster', 'download.zip');
-	zipCreator.createZipOnS3(function(err) {
+	zipCreator.createZipOnS3(function(err, url) {
 		if (err) {
 			context.fail('fail');
 		}
 		else {
-			context.succeed('ok');		
+			context.succeed({ Location: url });		
 		}
 	});
 };
@@ -44,27 +43,27 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 	this.createZipOnS3 = function(callback) {
 		console.log('createZipOnS3');
 		var self = this;
- 		async.series(
+ 		async.waterfall(
 		[
 			function(next) {
 				console.log('calling generateZipInMemory');
 				self.generateZipInMemory(function(err) {
 					if (err) return next(err);
-					next();
+					next(null, null);
 				});
 			},
-			function(next) {
+			function(response, next) {
 				console.log('calling saveInMemoryZipToS3');
-				self.saveInMemoryZipToS3(function(err) {
+				self.saveInMemoryZipToS3(function(err, url) {
 					if (err) return next(err);
-					next();
+					next(null, url);
 				});
 			}
 		],
-		function(err) {
-			console.log('createZipOnS3 final callback: ' + err);
+		function(err, url) {
+			console.log('createZipOnS3 final callback: ' + url);
 			if (err) return callback(err);
-			callback();
+			callback(null, url);
 		});
 	};
 
@@ -129,14 +128,14 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 				var options = {partSize: 10 * 1024 * 1024, queueSize: 1};
 				self.s3.upload(params, options, function(err, response) {
 					if (err) return next(err);
-					next();
+					next(null, response);
 				});
 			}
 		],
-		function(err) {
-			console.log('saveInMemoryZipToS3 final callback: ' + err);
+		function(err, response) {
+			console.log('saveInMemoryZipToS3 final callback: ' + response.Location);
 			if (err) return callback(err);
-			callback();
+			callback(null, response.Location);
 		});
 	};
 };

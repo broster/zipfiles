@@ -1,0 +1,35 @@
+{
+	"id": "fa3d6b56-e7cc-7f2f-bff7-291f5a2211ec",
+	"name": "ZipFiles",
+	"description": "",
+	"order": [
+		"ff4609fd-bef1-f44d-3b9d-ceace64e825f"
+	],
+	"folders": [],
+	"timestamp": 1450918718093,
+	"owner": 0,
+	"remoteLink": "",
+	"public": false,
+	"requests": [
+		{
+			"id": "ff4609fd-bef1-f44d-3b9d-ceace64e825f",
+			"headers": "Content-Type: application/json\nx-api-key: 3YVNZuEit47r5OsH7aUz98W42IpVrjhh3bWLDMia\n",
+			"url": "https://cnmc034tjj.execute-api.us-east-1.amazonaws.com/mbo/files/link",
+			"preRequestScript": "",
+			"pathVariables": {},
+			"method": "POST",
+			"data": [],
+			"dataMode": "raw",
+			"version": 2,
+			"tests": "",
+			"currentHelper": "normal",
+			"helperAttributes": {},
+			"time": 1450919138394,
+			"name": "https://cnmc034tjj.execute-api.us-east-1.amazonaws.com/mbo",
+			"description": "",
+			"collectionId": "fa3d6b56-e7cc-7f2f-bff7-291f5a2211ec",
+			"responses": [],
+			"rawModeData": "{\r\n  \"project_id\": \"1234\",\r\n  \"file_names\": [\r\n    \"file1.txt\",\r\n    \"file4.txt\"\r\n  ],\r\n  \"tags\": [\r\n    \"textfiles\",\r\n    \"mbo\"\r\n  ]\r\n}"
+		}
+	]
+}
