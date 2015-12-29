@@ -54,7 +54,14 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 			},
 			function(response, next) {
 				console.log('calling saveInMemoryZipToS3');
-				self.saveInMemoryZipToS3(function(err, url) {
+				self.saveInMemoryZipToS3(function(err) {
+					if (err) return next(err);
+					next(null, null);
+				});
+			},
+			function(response, next) {
+				console.log('calling getPreSignedUrl');
+				self.getPreSignedUrl(function(err, url) {
 					if (err) return next(err);
 					next(null, url);
 				});
@@ -136,6 +143,27 @@ function ZipCreator(event, s3, zip, bucket, zipFileName) {
 			console.log('saveInMemoryZipToS3 final callback: ' + response.Location);
 			if (err) return callback(err);
 			callback(null, response.Location);
+		});
+	};
+	
+	this.getPreSignedUrl = function(callback) {
+		console.log('getPreSignedUrl');
+		var self = this;
+ 		async.waterfall(
+		[
+			function(next) {
+				console.log('generating pre-signed URL...');
+				var params = {Bucket: self.bucket, Key: self.zipFileName};
+				self.s3.getSignedUrl('getObject', params, function (err, url) {
+					if (err) return next(err);
+					next(null, url);
+				});
+			}
+		],
+		function(err, response) {
+			console.log('getPreSignedUrl final callback: ' + response);
+			if (err) return callback(err);
+			callback(null, response);
 		});
 	};
 };
