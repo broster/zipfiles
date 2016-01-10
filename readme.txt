@@ -96,6 +96,16 @@ Not much to say here. Just a few small files on S3 that act as the source for th
 
 Since we are serving up the ZIP from S3 we don't have to worry about streaming bytes or handling scaling. Just happens for you.
 
+-> Configuratiaon
+
+API Gateway & S3 were manual but lambda was push button deploy. 
+
+Learnings
+--------------------------------------------
+
+Learned quite a bit about Node.js, API Gateway, and Lambda. I didn't get into any visual debuggers but rather just used print statements. I know Node comes with a debugger that is text based. There are IDE debuggers out there and Visual Studio has some Node tools that allow for profiling and debugging. There is a ton of open source library support for Node so there is no shortage of existing code to leverage.
+
+I believe you could create well structured and unit tested code using Node.js and the IDE of your choice. If you are comfortable with javascript this seems like a great platform to build on. It obviously has the support of Amazon. We should continue to consider it for smaller projects like we have with service location and the project mapping service for sync.
 
 
 
